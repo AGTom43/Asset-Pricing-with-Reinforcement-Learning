@@ -220,14 +220,19 @@ class Critic(nn.Module):
   def __init__(self, input_dim, output_dim, hidden_size=128):
     super(Critic, self).__init__()
 
-    input_dim = input_dim[0]
+    input_dim = input_dim[
+        0]  # Assuming output_dim represents the action dimension
+    action_dim = 2
+
     self.fc0 = nn.Linear(1, input_dim)
-    self.fc1 = nn.Linear(input_dim, hidden_size)
+    self.fc1 = nn.Linear(input_dim + action_dim,
+                         hidden_size)  # Combine state and action dimensions
     self.relu = nn.ReLU()
     self.fc2 = nn.Linear(hidden_size, output_dim)
 
-  def forward(self, state):
-    x = self.relu(self.fc0(state))
+  def forward(self, state, action):
+    x_state = self.relu(self.fc0(state))
+    x = torch.cat((x_state, action), dim=1)  # Concatenate state and action
     x = self.relu(self.fc1(x))
     x = self.fc2(x)
     return x
@@ -244,6 +249,6 @@ critic_model = Critic(input_dim=state_dim, output_dim=1)
 state = torch.FloatTensor(
     env._get_observation())  # Assuming _get_observation() returns the state
 action = actor_model.forward(state)
-value_estimate = critic_model.forward(state)
+value_estimate = critic_model.forward(state, action)
 
 print(value_estimate)

@@ -23,24 +23,24 @@ class DDPGTradingEnv(gymnasium.Env):
 
     self.shape = (window_size, self.signal_features.shape[1])
 
-    discrete_actions = spaces.Box(low=-1,
-                                  high=1,
-                                  shape=(1, ),
-                                  dtype=np.float32)
-    continuous_quantity = spaces.Box(low=-1,
-                                     high=1,
-                                     shape=(1, ),
-                                     dtype=np.float32)
-    continuous_amount = spaces.Box(low=0,
-                                   high=1,
-                                   shape=(1, ),
-                                   dtype=np.float32)
+    # discrete_actions = spaces.Box(low=-1,
+    #                               high=1,
+    #                               shape=(1, ),
+    #                               dtype=np.float32)
+    # continuous_quantity = spaces.Box(low=-1,
+    #                                  high=1,
+    #                                  shape=(1, ),
+    #                                  dtype=np.float32)
+    # continuous_amount = spaces.Box(low=0,
+    #                                high=1,
+    #                                shape=(1, ),
+    #                                dtype=np.float32)
 
     # Include the amount as part of the action space
     #         self.action_space = spaces.Tuple((discrete_actions, continuous_amount))
-    self.action_space = spaces.Box(low=0,
+    self.action_space = spaces.Box(low=-1,
                                    high=1,
-                                   shape=(2, ),
+                                   shape=(1, ),
                                    dtype=np.float32)
 
     self.observation_space = spaces.Box(low=0,
@@ -79,38 +79,36 @@ class DDPGTradingEnv(gymnasium.Env):
     observation = self.signal_features[start:end]
     return observation
 
-  def _take_action(self, action_values):
+  def _take_action(self, action_value):
     current_price = self.prices[self.current_step]
-    buy_sell_decision = action_values[0]
-    amount = action_values[1]
-
-    if buy_sell_decision >= 0.5:
-      self._buy_stock(current_price, amount)
-    elif buy_sell_decision < 0.5:
-      self._sell_stock(current_price, amount)
+                   
+    if buy_sell_decision > 0:
+      self._buy_stock(current_price, action_value)
+    elif buy_sell_decision < 0:
+      self._sell_stock(current_price, action_value)
 
   def _update_portfolio(self, action_value):
     current_price = self.prices[self.current_step]
-    if action_value[0] >= 0.5:
-      self._buy_stock(current_price, amount=action_value[1])
-    elif action_value[0] < 0.5:
-      self._sell_stock(current_price, amount=-action_value[1])
+    if action_value > 0:
+      self._buy_stock(current_price, action_value)
+    elif action_value < 0:
+      self._sell_stock(current_price, action_value)
     # Update the portfolio value
     self.portfolio_value = self.balance + self.shares_held * current_price
 
-  def _buy_stock(self, current_price, amount):
+  def _buy_stock(self, action_value):
     # Determine the actual amount of stock to buy based on 'amount'
     # For example, you might interpret 'amount' as a percentage of your balance
     #         buy_amount = min(self.balance / current_price, amount)
-    buy_amount = round(self.balance / current_price) * amount
+    buy_amount = round(self.balance / current_price) * action_value
     self.balance -= buy_amount * current_price
     self.shares_held += buy_amount
 
-  def _sell_stock(self, current_price, amount):
+  def _sell_stock(self, action_value):
     # Determine the actual amount of stock to sell based on 'amount'
     # Ensure that you don't sell more than you hold
     #         sell_amount = min(self.shares_held, amount)
-    sell_amount = self.shares_held * amount
+    sell_amount = self.shares_held * action_value
     self.balance += sell_amount * current_price
     self.shares_held -= sell_amount
 
